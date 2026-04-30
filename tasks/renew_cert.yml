@@ -46,6 +46,6 @@
       environment:
         AWS_SHARED_CREDENTIALS_FILE: /tmp/.certbot-aws-credentials
 
-- name: Show certbot output for {{ cert_domain_base }}
-  ansible.builtin.debug:
-    msg: "{{ _certbot_result.stdout_lines }}"
+    - name: Show certbot output for {{ cert_domain_base }}
+      ansible.builtin.debug:
+        msg: "{{ _certbot_result.stdout_lines }}"
