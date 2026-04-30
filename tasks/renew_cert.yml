@@ -17,18 +17,10 @@
   vars:
     wildcard_cert: "{{ _cert_name.split('.')[0] == 'star' }}"
   block:
-    - name: debug
-      ansible.builtin.debug:
-        var: wildcard_cert
-    
-    - name: Set the fact for the wildcard domain and readable cert name for {{ _cert_name }}
+    - name: Run certbot to renew the certificate for {{ _cert_name }}
       vars:
-        _cert_domain_base: "{{ _cert_name if not wildcard_cert else (_cert_name | regex_replace('^star\\.', '')) }}"
-      ansible.builtin.set_fact:
-        cert_domain_base: "{{ _cert_domain_base }}"
-        cert_domain_wildcard: "{{ '*.' ~ _cert_domain_base if wildcard_cert else '' }}"
-
-    - name: Run certbot to renew the certificate for {{ cert_domain_base }}
+       _cert_domain_base: "{{ _cert_name if not wildcard_cert else (_cert_name | regex_replace('^star\\.', '')) }}"
+       _cert_domain_wildcard: "{{ '*.' ~ _cert_domain_base if wildcard_cert else '' }}"
       ansible.builtin.command: >-
         certbot certonly
         {{ _dns_provider_plugin_args | default('') }}
@@ -37,13 +29,13 @@
         --agree-tos
         --email {{ cert_email }}
         --force-renewal
-        -d {{ cert_domain_base }}
-        {{ '-d ' ~ cert_domain_wildcard if wildcard_cert else '' }}
+        -d {{ _cert_domain_base }}
+        {{ '-d ' ~ _cert_domain_wildcard if wildcard_cert else '' }}
       register: _certbot_result
       changed_when: true
       environment:
         AWS_SHARED_CREDENTIALS_FILE: /tmp/.certbot-aws-credentials
 
-    - name: Show certbot output for {{ cert_domain_base }}
+    - name: Show certbot output for {{ _cert_name }}
       ansible.builtin.debug:
         msg: "{{ _certbot_result.stdout_lines }}"
