@@ -1,0 +1,23 @@
+- name: Create the wildcard vars if wildcard_cert is true
+  when: wildcard_cert | bool
+  ansible.builtin.set_fact:
+    cert_domain_wildcard: "*.{{ cert_domain_base }}"
+    cert_domain_wildcard_readable: "star.{{ cert_domain_base }}"
+
+- name: Issue wildcard certificate via DNS challenge
+  ansible.builtin.command: >
+    certbot certonly
+    {{ _dns_provider_plugin_args | default('') }}
+    --cert-name {{ cert_domain_wildcard_readable if wildcard_cert | bool else cert_domain_base }}
+    --non-interactive
+    --agree-tos
+    --email {{ cert_email }}
+    -d {{ cert_domain_base }}
+    {{ '-d ' ~ cert_domain_wildcard if wildcard_cert | bool else '' }}
+  register: _certbot_result
+  changed_when: "'Congratulations' in _certbot_result.stdout"
+  environment: "{{ _dns_provider_env_vars | default({}) }}"
+    
+- name: Show certbot output for {{ cert_domain_base }}
+  ansible.builtin.debug:
+    msg: "{{ _certbot_result.stdout_lines }}"

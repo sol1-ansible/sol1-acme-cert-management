@@ -1,0 +1,7 @@
+_dns_plugin_certbot_packages:
+  - python3-certbot-dns-route53
+
+_dns_provider_plugin_args: "--dns-route53"
+
+_dns_provider_env_vars:
+  AWS_SHARED_CREDENTIALS_FILE: "{{ ansible_user_dir }}/.certbot-aws-credentials"

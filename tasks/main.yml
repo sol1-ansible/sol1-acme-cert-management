@@ -1,0 +1,27 @@
+---
+- name: Include os specific variables
+  ansible.builtin.include_vars:
+    file: "{{ ansible_os_family | lower }}.yml"
+
+- name: Include DNS plugin specific variables
+  ansible.builtin.include_vars:
+    file: "{{ certbot_domain_dns_provider | lower }}.yml"
+
+- name: Install certbot packages and packages for DNS plugins
+  ansible.builtin.apt:
+    name: "{{ _dist_certbot_packages + _dns_plugin_certbot_packages }}"
+    state: present
+    update_cache: true
+
+- name: Find existing certificates in the certbot live directory
+  ansible.builtin.find:
+    paths: "{{ certbot_live_path }}"
+    file_type: directory
+    recurse: false
+  register: cert_dirs
+
+- name: Include task to call the dns provider specific tasks
+  when:
+    - certbot_domain_dns_provider is defined
+    - certbot_domain_dns_provider | length > 0
+  ansible.builtin.include_tasks: "{{ certbot_domain_dns_provider | lower }}.yml"

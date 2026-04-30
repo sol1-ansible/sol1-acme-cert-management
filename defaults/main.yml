@@ -1,0 +1,13 @@
+# Default variables for certbot DNS provider plugin configuration.
+certbot_domain_dns_provider: route53
+
+# Base path for certbot live directories where certificates are stored.
+certbot_live_path: "/etc/letsencrypt/live"
+
+# Threshold in days to determine if renewal is required.
+cert_renew_threshold: 14
+
+# Whether to issue a wildcard certificate for the base domain. 
+# If true, cert_domain_wildcard and cert_domain_wildcard_readable will be set based on cert_domain_base.
+# If false, only a certificate for cert_domain_base will be issued/renewed.
+wildcard_cert: true

@@ -1,0 +1,30 @@
+- name: Block to handle aws IAM credentials if they have been supplied
+  block:
+    - name: Create the credentials file with the provided AWS IAM credentials
+      ansible.builtin.template:
+        src: aws_credentials.j2
+        dest: "{{ ansible_user_dir }}/.certbot-aws-credentials"
+        mode: "0600"
+      no_log: true
+
+    - name: Include the task to issue a cert if the cert_domain_base variable is defined and not empty
+      when: 
+        - cert_domain_base is defined 
+        - cert_domain_base | length > 0
+      ansible.builtin.include_tasks: issue_cert.yml
+
+    - name: Include the renew task if there is existing certs in the live directory
+      when: cert_dirs.files is defined
+      vars:
+        _cert_name: "{{ cert_dir_path | basename }}"
+      ansible.builtin.include_tasks: renew_cert.yml
+      loop: "{{ cert_dirs.files | default([]) | map(attribute='path') | list }}"
+      loop_control:
+        loop_var: cert_dir_path
+        label: "{{ cert_dir_path | basename }}"
+      
+  always:
+    - name: Remove AWS credentials file regardless of the outcome of the block
+      ansible.builtin.file:
+        path: "{{ ansible_user_dir }}/.certbot-aws-credentials"
+        state: absent

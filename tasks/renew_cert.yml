@@ -1,0 +1,51 @@
+- name: Read certificate info and check renewal threshold for {{ _cert_name }}
+  community.crypto.x509_certificate_info:
+    path: "{{ certbot_live_path }}/{{ _cert_name }}/fullchain.pem"
+    valid_at:
+      threshold: "+{{ cert_renew_threshold }}d"
+  register: _cert_info
+
+- name: Display certificate status for {{ _cert_name }}
+  when:  _cert_info.valid_at.threshold
+  ansible.builtin.debug:
+    msg: >-
+      {{ _cert_name }} valid until {{ _cert_info.not_after[:8] }}.
+      Threshold for renewal is {{ cert_renew_threshold }} days, so renewal is not required.
+
+- name: Set facts and run certbot to renew wildcard certificate for {{ _cert_name }}
+  when: not _cert_info.valid_at.threshold
+  vars:
+    wildcard_cert: "{{ _cert_name.split('.')[0] == 'star' }}"
+  block:
+    - name: Set the fact for the wildcard domain and readable cert name for {{ _cert_name }}
+      when: wildcard_cert
+      vars:
+        _cert_domain_base: "{{ _cert_name | regex_replace('^star\\.', '') }}"
+      ansible.builtin.set_fact:
+        cert_domain_base: "{{ _cert_domain_base }}"
+        cert_domain_wildcard: "*.{{ _cert_domain_base }}"
+    
+    - name: Set the facts for non wildcard domain {{ _cert_name }}
+      when: not wildcard_cert
+      ansible.builtin.set_fact:
+        cert_domain_base: "{{ _cert_name }}"
+
+    - name: Run certbot to renew the certificate for {{ cert_domain_base }}
+      ansible.builtin.command: >-
+        certbot certonly
+        {{ _dns_provider_plugin_args | default('') }}
+        --cert-name {{ cert_domain_wildcard_readable if wildcard_cert | bool else cert_domain_base }}
+        --non-interactive
+        --agree-tos
+        --email {{ cert_email }}
+        --force-renewal
+        -d {{ cert_domain_base }}
+        {{ '-d ' ~ cert_domain_wildcard if wildcard_cert | bool else '' }}
+      register: _certbot_result
+      changed_when: true
+      environment:
+        AWS_SHARED_CREDENTIALS_FILE: /tmp/.certbot-aws-credentials
+
+- name: Show certbot output for {{ cert_domain_base }}
+  ansible.builtin.debug:
+    msg: "{{ _certbot_result.stdout_lines }}"
