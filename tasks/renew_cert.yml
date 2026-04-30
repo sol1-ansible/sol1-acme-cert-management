@@ -18,17 +18,11 @@
     wildcard_cert: "{{ _cert_name.split('.')[0] == 'star' }}"
   block:
     - name: Set the fact for the wildcard domain and readable cert name for {{ _cert_name }}
-      when: wildcard_cert
       vars:
-        _cert_domain_base: "{{ _cert_name | regex_replace('^star\\.', '') }}"
+        _cert_domain_base: "{{ _cert_name if not wildcard_cert else (_cert_name | regex_replace('^star\\.', '')) }}"
       ansible.builtin.set_fact:
         cert_domain_base: "{{ _cert_domain_base }}"
-        cert_domain_wildcard: "*.{{ _cert_domain_base }}"
-    
-    - name: Set the facts for non wildcard domain {{ _cert_name }}
-      when: not wildcard_cert
-      ansible.builtin.set_fact:
-        cert_domain_base: "{{ _cert_name }}"
+        cert_domain_wildcard: "{{ '*. ' ~ _cert_domain_base if wildcard_cert else '' }}"
 
     - name: Run certbot to renew the certificate for {{ cert_domain_base }}
       ansible.builtin.command: >-
@@ -40,7 +34,7 @@
         --email {{ cert_email }}
         --force-renewal
         -d {{ cert_domain_base }}
-        {{ '-d ' ~ cert_domain_wildcard if wildcard_cert | bool else '' }}
+        {{ '-d ' ~ cert_domain_wildcard if wildcard_cert else '' }}
       register: _certbot_result
       changed_when: true
       environment:
