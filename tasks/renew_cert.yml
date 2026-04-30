@@ -34,7 +34,7 @@
       ansible.builtin.command: >-
         certbot certonly
         {{ _dns_provider_plugin_args | default('') }}
-        --cert-name {{ cert_domain_wildcard_readable if wildcard_cert | bool else cert_domain_base }}
+        --cert-name {{ _cert_name }}
         --non-interactive
         --agree-tos
         --email {{ cert_email }}
